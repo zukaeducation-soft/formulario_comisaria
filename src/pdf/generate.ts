@@ -1,4 +1,5 @@
 import type { PDFImage } from 'pdf-lib'
+import { todosLosNna, tituloNna } from '../form/nna'
 import { FORM_SUBTITLE, FORM_TITLE, sections } from '../form/schema'
 import { asRows, asString, type FormData } from '../form/types'
 import type { Profile } from '../store/storage'
@@ -59,6 +60,17 @@ export async function generatePdf({ data, profile, assets }: GenerateOptions): P
     if (section.id === 'evidencia') continue
     // El análisis de derechos es opcional
     if (section.id === 'derechos' && !incluyeDerechos(data)) continue
+    // Datos del NNA: una sección por cada niño, niña o adolescente del informe
+    if (section.id === 'nna') {
+      const lista = todosLosNna(data)
+      lista.forEach((d, i) => {
+        const rn = i === 0 ? r : new BlockRenderer(doc, d)
+        rn.sectionTitle(tituloNna(section.title, i, lista.length))
+        rn.flow(section.blocks)
+        doc.advance(4)
+      })
+      continue
+    }
     // La sección del profesional (datos + firma) se mantiene completa en una misma página.
     if (section.id === 'profesional') doc.ensure(180)
     r.sectionTitle(section.title)

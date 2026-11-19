@@ -26,6 +26,7 @@ import {
   type ITableCellOptions,
 } from 'docx'
 import { parseRich } from '../form/richtext'
+import { todosLosNna, tituloNna } from '../form/nna'
 import { FORM_SUBTITLE, FORM_TITLE, sections } from '../form/schema'
 import {
   asList,
@@ -423,6 +424,14 @@ export async function generateDocx({ data, profile, assets }: GenerateDocxOption
   for (const section of sections) {
     if (section.id === 'evidencia') continue
     if (section.id === 'derechos' && !incluyeDerechos(data)) continue
+    if (section.id === 'nna') {
+      const lista = todosLosNna(data)
+      lista.forEach((d, i) => {
+        body.push(...(i === 0 ? r : new DocxRenderer(d)).section(tituloNna(section.title, i, lista.length), section.blocks))
+        body.push(para([run('')], { spacing: { before: 0, after: 60 } }))
+      })
+      continue
+    }
     const extra = section.id === 'profesional' ? signature(data, profile) : []
     body.push(...r.section(section.title, section.blocks, extra))
     body.push(para([run('')], { spacing: { before: 0, after: 60 } }))

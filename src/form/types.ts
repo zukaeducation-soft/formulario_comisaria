@@ -171,8 +171,11 @@ export interface Section {
 }
 
 export type TableRow = Record<string, string>
-export type FieldValue = string | string[] | TableRow[] | undefined
-export type FormData = Record<string, FieldValue>
+/** Valor de un campo. `FormData[]` guarda los NNA adicionales del informe (ver form/nna.ts). */
+export type FieldValue = string | string[] | TableRow[] | FormData[] | undefined
+export interface FormData {
+  [key: string]: FieldValue
+}
 
 export function asString(v: FieldValue): string {
   return typeof v === 'string' ? v : ''

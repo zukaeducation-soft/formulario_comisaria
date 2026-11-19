@@ -6,8 +6,10 @@ import { ExportMenu } from '../components/ExportMenu'
 import { TopBar } from '../components/TopBar'
 import { FLUSH_EVENT } from '../components/UpdatePrompt'
 import { conFotosParaPdf } from '../evidencias/fotos'
-import { dialogo } from '../components/Dialog'
+import { confirmar, dialogo } from '../components/Dialog'
+import { Icon } from '../components/Icon'
 import { toast } from '../components/Toast'
+import { agregarNna, nnaAdicionales, nombreNna, nombresInforme, quitarNna, recalcularEdades, setNnaAdicional } from '../form/nna'
 import { sectionsDone } from '../form/progress'
 import { sections } from '../form/schema'
 import { asString, type FieldValue, type FormData } from '../form/types'
@@ -99,6 +101,22 @@ export function Editor({ id, sectionId }: Props) {
     [sync, storage, id],
   )
 
+  /** Aplica un cambio a los datos del informe y programa el guardado. */
+  const cambiar = useCallback(
+    (fn: (d: FormData) => FormData) => {
+      setReport((prev) => {
+        if (!prev) return prev
+        const data = fn(prev.data)
+        if (data === prev.data) return prev
+        const next = { ...prev, data }
+        setSaved(false)
+        persist(next)
+        return next
+      })
+    },
+    [persist],
+  )
+
   const api: FormApi | null = useMemo(() => {
     if (!report) return null
     return {
@@ -115,6 +133,7 @@ export function Editor({ id, sectionId }: Props) {
             if (edad) data = { ...data, edad_anios: String(edad.anios), edad_meses: String(edad.meses) }
             else if (key === 'fecha_nacimiento' && !asString(data.fecha_nacimiento)) data = { ...data, edad_anios: '', edad_meses: '' }
           }
+          if (key === 'fecha_elaboracion') data = recalcularEdades(data)
           // Los campos que quedan ocultos por la lógica del formulario se vacían
           data = pruneHidden(data)
           const next = { ...prev, data }
@@ -125,6 +144,39 @@ export function Editor({ id, sectionId }: Props) {
       },
     }
   }, [report, persist, uid])
+
+  const extras = report ? nnaAdicionales(report.data) : []
+  const apisNna: FormApi[] = useMemo(
+    () =>
+      nnaAdicionales(report?.data ?? {}).map((d, i) => ({
+        data: d,
+        informeId: report?.id,
+        uid,
+        set: (key: string, value: FieldValue) => cambiar((data) => setNnaAdicional(data, i, key, value)),
+      })),
+    [report?.data, report?.id, uid, cambiar],
+  )
+
+  const agregarOtroNna = () => {
+    cambiar(agregarNna)
+    // Llevar la vista al nuevo bloque cuando aparezca
+    window.setTimeout(() => {
+      const bloques = document.querySelectorAll('.nna-block')
+      bloques[bloques.length - 1]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 60)
+  }
+
+  const quitarOtroNna = async (i: number) => {
+    const nombre = nombreNna(extras[i] ?? {})
+    const ok = await confirmar({
+      titulo: `¿Quitar el NNA ${i + 2}?`,
+      mensaje: nombre ? `Se borrarán del informe los datos de ${nombre}.` : 'Se borrarán del informe los datos de este NNA.',
+      aceptar: 'Quitar',
+      peligro: true,
+      icono: 'trash',
+    })
+    if (ok) cambiar((data) => quitarNna(data, i))
+  }
 
   const flush = () => {
     if (!report) return
@@ -253,7 +305,7 @@ export function Editor({ id, sectionId }: Props) {
     )
   }
 
-  const nna = `${asString(report.data.nombres)} ${asString(report.data.apellidos)}`.trim()
+  const nna = nombresInforme(report.data)
   const done = sectionsDone(report.data)
   const firmaOk = !!profile.firma
 
@@ -299,9 +351,41 @@ export function Editor({ id, sectionId }: Props) {
             </small>
           </div>
           <div className="section-card__body">
+            {section.id === 'nna' && extras.length > 0 && (
+              <div className="nna-block__head">
+                <span className="nna-block__num">NNA 1</span>
+                <span className="nna-block__name">{nombreNna(report.data) || 'Sin nombre'}</span>
+              </div>
+            )}
             {section.blocks.map((b, i) => (
               <BlockView key={i} block={b} />
             ))}
+
+            {section.id === 'nna' &&
+              apisNna.map((a, n) => (
+                <div className="nna-block" key={n}>
+                  <div className="nna-block__head">
+                    <span className="nna-block__num">NNA {n + 2}</span>
+                    <span className="nna-block__name">{nombreNna(a.data) || 'Sin nombre'}</span>
+                    <button type="button" className="btn btn--ghost btn--sm nna-block__remove" onClick={() => void quitarOtroNna(n)}>
+                      <Icon name="trash" />
+                      Quitar
+                    </button>
+                  </div>
+                  <FormContext.Provider value={a}>
+                    {section.blocks.map((b, i) => (
+                      <BlockView key={i} block={b} />
+                    ))}
+                  </FormContext.Provider>
+                </div>
+              ))}
+
+            {section.id === 'nna' && (
+              <button type="button" className="btn btn--ghost nna-add" onClick={agregarOtroNna}>
+                <Icon name="plus" />
+                Agregar otro NNA
+              </button>
+            )}
 
             {section.id === 'profesional' && (
               <div className="f-group">

@@ -7,6 +7,7 @@
  * - Los espacios en blanco tienen altura mínima pero crecen con el texto.
  * - La paginación se calcula en el navegador (script incluido) con "Página X de N".
  */
+import { todosLosNna, tituloNna } from '../form/nna'
 import { asList, asRows, asString, type FormData } from '../form/types'
 import type { Profile } from '../store/storage'
 import { richToHtml } from '../form/richtext'
@@ -89,69 +90,29 @@ export function buildPrintHtml(data: FormData, profile: Profile, assets: HtmlAss
 
   const colgroup = (widths: number[]): string => `<colgroup>${widths.map((w) => `<col style="width:${w}%">`).join('')}</colgroup>`
 
-  // ---------- Tablas de convivientes y contactos ----------
-  const conv = asRows(data.convivientes)
-  const convRows = Array.from({ length: Math.max(1, conv.length) }, (_, i) => {
-    const row = conv[i] ?? {}
-    return `<tr><td class="c">${i + 1}</td><td>${esc(row.nombre ?? '')}&nbsp;</td><td>${esc(row.parentesco ?? '')}&nbsp;</td><td>${esc(row.no_pariente ?? '')}&nbsp;</td><td>${cb(row.sexo === 'Mujer')}Mujer &nbsp;${cb(row.sexo === 'Hombre')}Hombre</td><td>${esc(row.edad ?? '')}&nbsp;</td><td>${esc(row.ocupacion ?? '')}&nbsp;</td></tr>`
-  }).join('')
-  const cont = asRows(data.contactos)
-  const contRows = Array.from({ length: Math.max(1, cont.length) }, (_, i) => {
-    const row = cont[i] ?? {}
-    return `<tr><td style="height:20px">${esc(row.nombre ?? '')}&nbsp;</td><td>${esc(row.rol ?? '')}&nbsp;</td><td>${esc(row.contacto ?? '')}&nbsp;</td></tr>`
-  }).join('')
-
-  // ---------- Evidencia fotográfica ----------
-  const fotos = asRows(data._fotos).filter((f) => typeof f.src === 'string' && f.src)
-  const fotoRows: string[] = []
-  for (let i = 0; i < fotos.length; i += 2) {
-    const par = fotos.slice(i, i + 2)
-    const celdas = par.map((f, j) => `<td class="foto"><img src="${f.src}" alt="Fotografía ${i + j + 1}"><div class="small">${esc(f.descripcion ?? '')}</div></td>`)
-    if (celdas.length === 1) celdas.push('<td class="foto"></td>')
-    fotoRows.push(`<tr>${celdas.join('')}</tr>`)
-  }
-  const anexo = fotoRows.length
-    ? `
-<table>
-${colgroup([50, 50])}
-<tr><td colspan="2" class="sec">Anexo. Evidencia fotográfica</td></tr>
-${fotoRows.join('\n')}
-</table>`
-    : ''
-
-  // ---------- Firma ----------
-  const nombre = v('prof_nombre') || profile.nombre
-  const tarjeta = v('prof_tarjeta') || profile.tarjeta
-  const cargo = profile.cargo || 'Profesional en Trabajo Social'
-  const firma = `<div class="firma-slot">${profile.firma ? `<img class="firma" src="${profile.firma}" alt="Firma">` : ''}</div>`
-
-  const nna = `${v('nombres')} ${v('apellidos')}`.trim()
-  const title = esc(`Informe Trabajo Social${nna ? ` - ${nna}` : ''}`)
-
-  const header = `
-<table class="hdr">
-<tr>
-  <td class="logo" style="width:12%"><img src="${assets.escudo}" style="height:58px"><span>MUNICIPIO DE<br>MORALES</span></td>
-  <td class="logo" style="width:14%"><img src="${assets.pdet}" style="height:62px"></td>
-  <td class="title" style="width:58%"><div class="t1">ALCALDÍA MUNICIPAL<br>NIT: 891500982-6</div><div class="t2">INFORME TRABAJO SOCIAL</div></td>
-  <td class="meta" style="width:16%">Fecha: junio de 2024<br>Versión: 11<br><span class="pn">Página 1 de 1</span><br>Cód.F-PM-096</td>
-</tr>
-</table>`
-
-  const footer = `<div class="ftr"><img src="${assets.pie}" alt=""></div>`
-
-  const body = `
+  /** Sección 2 para un NNA (`d` tiene las claves de la sección 2). */
+  const nnaHtml = (d: FormData, titulo: string): string => {
+    const v = (key: string): string => asString(d[key])
+    const val = (key: string): string => esc(v(key))
+    const r = (key: string, opt: string): string => cb(v(key) === opt)
+    const c = (key: string, opt: string): string => cb(asList(d[key]).includes(opt))
+    const line = (key: string, min: number, fmt: (s: string) => string = esc): string =>
+      `<span class="line" style="min-width:${min}px">${fmt(v(key))}</span>`
+    // ---------- Tablas de convivientes y contactos ----------
+    const conv = asRows(d.convivientes)
+    const convRows = Array.from({ length: Math.max(1, conv.length) }, (_, i) => {
+      const row = conv[i] ?? {}
+      return `<tr><td class="c">${i + 1}</td><td>${esc(row.nombre ?? '')}&nbsp;</td><td>${esc(row.parentesco ?? '')}&nbsp;</td><td>${esc(row.no_pariente ?? '')}&nbsp;</td><td>${cb(row.sexo === 'Mujer')}Mujer &nbsp;${cb(row.sexo === 'Hombre')}Hombre</td><td>${esc(row.edad ?? '')}&nbsp;</td><td>${esc(row.ocupacion ?? '')}&nbsp;</td></tr>`
+    }).join('')
+    const cont = asRows(d.contactos)
+    const contRows = Array.from({ length: Math.max(1, cont.length) }, (_, i) => {
+      const row = cont[i] ?? {}
+      return `<tr><td style="height:20px">${esc(row.nombre ?? '')}&nbsp;</td><td>${esc(row.rol ?? '')}&nbsp;</td><td>${esc(row.contacto ?? '')}&nbsp;</td></tr>`
+    }).join('')
+    return `
 <table>
 ${colgroup([25, 25, 25, 25])}
-<tr><td colspan="4" class="c b" style="font-size:9pt">FORMATO INFORME DE VALORACIÓN SOCIOFAMILIAR DE VERIFICACIÓN DE DERECHOS<br>RESTABLECIMIENTO DE DERECHOS${v('_codigo') ? `<br><span style="font-size:8pt;font-weight:normal">Informe N.° <b>${val('_codigo')}</b></span>` : ''}</td></tr>
-<tr><td colspan="4" class="sec">1. DATOS GENERALES</td></tr>
-<tr><td class="b">Fecha de elaboración:</td><td colspan="3" style="height:18px">${date('fecha_elaboracion')}&nbsp;</td></tr>
-<tr><td class="b">Elaborado por:</td><td colspan="3" style="height:18px">${val('elaborado_por')}&nbsp;</td></tr>
-<tr><td class="b">Sección:</td><td colspan="3" style="height:18px">${val('seccion')}&nbsp;</td></tr>
-<tr><td class="b">Tarjeta Profesional N°:</td><td colspan="3" style="height:18px">${val('tarjeta_profesional')}&nbsp;</td></tr>
-<tr><td class="b">Dirigido a:</td><td colspan="3" style="height:18px">${val('dirigido_a')}&nbsp;</td></tr>
-<tr><td class="b">Asunto:</td><td colspan="3" style="height:18px">${rich('asunto')}&nbsp;</td></tr>
-<tr><td colspan="4" class="sec">2. DATOS DEL NIÑO, NIÑA O ADOLESCENTE</td></tr>
+<tr><td colspan="4" class="sec">${esc(titulo)}</td></tr>
 <tr><td class="b" colspan="2">Nombre(s)</td><td class="b" colspan="2">Apellido(s)</td></tr>
 <tr><td colspan="2" style="height:22px">${val('nombres')}&nbsp;</td><td colspan="2">${val('apellidos')}&nbsp;</td></tr>
 </table>
@@ -312,6 +273,64 @@ ${contRows}
   <td>${r('ubicacion_actual', 'Institución de salud')}Institución de salud<br>${r('ubicacion_actual', 'Familia de origen')}Familia de origen</td>
   <td>${r('ubicacion_actual', 'Familia extensa')}Familia extensa<br>${r('ubicacion_actual', 'Familia solidaria')}Familia solidaria</td>
 </tr>
+</table>`
+  }
+
+  // ---------- Evidencia fotográfica ----------
+  const fotos = asRows(data._fotos).filter((f) => typeof f.src === 'string' && f.src)
+  const fotoRows: string[] = []
+  for (let i = 0; i < fotos.length; i += 2) {
+    const par = fotos.slice(i, i + 2)
+    const celdas = par.map((f, j) => `<td class="foto"><img src="${f.src}" alt="Fotografía ${i + j + 1}"><div class="small">${esc(f.descripcion ?? '')}</div></td>`)
+    if (celdas.length === 1) celdas.push('<td class="foto"></td>')
+    fotoRows.push(`<tr>${celdas.join('')}</tr>`)
+  }
+  const anexo = fotoRows.length
+    ? `
+<table>
+${colgroup([50, 50])}
+<tr><td colspan="2" class="sec">Anexo. Evidencia fotográfica</td></tr>
+${fotoRows.join('\n')}
+</table>`
+    : ''
+
+  // ---------- Firma ----------
+  const nombre = v('prof_nombre') || profile.nombre
+  const tarjeta = v('prof_tarjeta') || profile.tarjeta
+  const cargo = profile.cargo || 'Profesional en Trabajo Social'
+  const firma = `<div class="firma-slot">${profile.firma ? `<img class="firma" src="${profile.firma}" alt="Firma">` : ''}</div>`
+
+  const nna = `${v('nombres')} ${v('apellidos')}`.trim()
+  const title = esc(`Informe Trabajo Social${nna ? ` - ${nna}` : ''}`)
+
+  const header = `
+<table class="hdr">
+<tr>
+  <td class="logo" style="width:12%"><img src="${assets.escudo}" style="height:58px"><span>MUNICIPIO DE<br>MORALES</span></td>
+  <td class="logo" style="width:14%"><img src="${assets.pdet}" style="height:62px"></td>
+  <td class="title" style="width:58%"><div class="t1">ALCALDÍA MUNICIPAL<br>NIT: 891500982-6</div><div class="t2">INFORME TRABAJO SOCIAL</div></td>
+  <td class="meta" style="width:16%">Fecha: junio de 2024<br>Versión: 11<br><span class="pn">Página 1 de 1</span><br>Cód.F-PM-096</td>
+</tr>
+</table>`
+
+  const footer = `<div class="ftr"><img src="${assets.pie}" alt=""></div>`
+
+  const body = `
+<table>
+${colgroup([25, 25, 25, 25])}
+<tr><td colspan="4" class="c b" style="font-size:9pt">FORMATO INFORME DE VALORACIÓN SOCIOFAMILIAR DE VERIFICACIÓN DE DERECHOS<br>RESTABLECIMIENTO DE DERECHOS${v('_codigo') ? `<br><span style="font-size:8pt;font-weight:normal">Informe N.° <b>${val('_codigo')}</b></span>` : ''}</td></tr>
+<tr><td colspan="4" class="sec">1. DATOS GENERALES</td></tr>
+<tr><td class="b">Fecha de elaboración:</td><td colspan="3" style="height:18px">${date('fecha_elaboracion')}&nbsp;</td></tr>
+<tr><td class="b">Elaborado por:</td><td colspan="3" style="height:18px">${val('elaborado_por')}&nbsp;</td></tr>
+<tr><td class="b">Sección:</td><td colspan="3" style="height:18px">${val('seccion')}&nbsp;</td></tr>
+<tr><td class="b">Tarjeta Profesional N°:</td><td colspan="3" style="height:18px">${val('tarjeta_profesional')}&nbsp;</td></tr>
+<tr><td class="b">Dirigido a:</td><td colspan="3" style="height:18px">${val('dirigido_a')}&nbsp;</td></tr>
+<tr><td class="b">Asunto:</td><td colspan="3" style="height:18px">${rich('asunto')}&nbsp;</td></tr>
+</table>
+${todosLosNna(data).map((d, i, lista) => nnaHtml(d, tituloNna('2. DATOS DEL NIÑO, NIÑA O ADOLESCENTE', i, lista.length))).join('')}
+
+<table>
+${colgroup([36, 28, 36])}
 <tr><td colspan="3" class="sec">3. SÍNTESIS DE LA PETICIÓN QUE FUNDAMENTA LA SOLICITUD DE VALORACIÓN</td></tr>
 ${longRows('sintesis', { colspan: 3, minH: 55 })}
 <tr><td colspan="3" class="sec">4. METODOLOGÍA UTILIZADA EN LA VALORACIÓN</td></tr>

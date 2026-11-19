@@ -1,3 +1,4 @@
+import { NNA_ADICIONALES, nnaAdicionales, nnaTieneDatos } from '../form/nna'
 import type { FormData } from '../form/types'
 
 /** Datos del profesional en el formato que usan los generadores de PDF. */
@@ -106,6 +107,7 @@ export function isEmptyReport(data: FormData, profile: Profile): boolean {
     if (fechas.has(k)) continue
     if (k in base && base[k] === v) continue
     if (k === 'edad_anios' || k === 'edad_meses') continue
+    if (k === NNA_ADICIONALES && !nnaAdicionales(data).some(nnaTieneDatos)) continue
     return false
   }
   return true

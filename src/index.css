@@ -2694,3 +2694,41 @@ select.input {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* ---------- Varios NNA en la sección 2 ---------- */
+.nna-block {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 2px dashed var(--line);
+}
+.nna-block__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.nna-block__num {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.nna-block__name {
+  font-weight: 700;
+  color: var(--green-900);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.nna-block__remove {
+  margin-left: auto;
+}
+.nna-add {
+  align-self: flex-start;
+  margin-top: 4px;
+}

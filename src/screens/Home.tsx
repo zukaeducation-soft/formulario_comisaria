@@ -1,3 +1,4 @@
+import { nombresInforme, todosLosNna } from '../form/nna'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import ilustracion from '../assets/hero.webp'
@@ -110,7 +111,9 @@ export function Home() {
 
   const q = filtro.trim().toLowerCase()
   const visibles = q
-    ? reports.filter((r) => [r.codigo ?? '', asString(r.data.nombres), asString(r.data.apellidos), asString(r.data.doc_numero)].some((v) => v.toLowerCase().includes(q)))
+    ? reports.filter((r) =>
+        [r.codigo ?? '', ...todosLosNna(r.data).flatMap((d) => [asString(d.nombres), asString(d.apellidos), asString(d.doc_numero)])].some((v) => v.toLowerCase().includes(q)),
+      )
     : reports
   const pendientes = reports.filter((r) => r.dirty).length
   const completos = reports.filter((r) => progressPercent(r.data) >= 100).length
@@ -167,7 +170,7 @@ export function Home() {
           ) : (
             <ul className="rlist">
               {visibles.map((r) => {
-                const nombre = `${asString(r.data.nombres)} ${asString(r.data.apellidos)}`.trim()
+                const nombre = nombresInforme(r.data)
                 const pct = progressPercent(r.data)
                 return (
                   <li key={r.id} className="rrow">

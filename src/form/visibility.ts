@@ -1,3 +1,4 @@
+import { completarDescripciones } from './vif'
 import { municipiosDe, NOMBRES_DEPARTAMENTOS, PAISES } from '../data/colombia'
 import { seccionesDe } from './formatos'
 import { asList, asString, collectKeys, type Block, type Condition, type FormData, type SelectBlock } from './types'
@@ -81,6 +82,7 @@ export function edadEn(fechaNacimiento: string, fechaReferencia: string): { anio
  * para que no se oculte (ni se borre) al editar.
  */
 export function normalizeData(data: FormData): FormData {
+  if (data.formato === 'vif') return completarDescripciones(data)
   if (!data.analiza_derechos && ['derechos_vulnerados', 'derechos_amenazados', 'derechos_garantizados'].some((k) => typeof data[k] === 'string' && (data[k] as string).trim())) {
     return { ...data, analiza_derechos: 'Sí' }
   }

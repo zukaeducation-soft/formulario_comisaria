@@ -1,3 +1,4 @@
+import { completarDescripciones } from '../form/vif'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { BlockView } from '../components/BlockView'
@@ -136,7 +137,7 @@ export function Editor({ id, sectionId }: Props) {
           }
           if (key === 'fecha_elaboracion') data = recalcularEdades(data)
           // Los campos que quedan ocultos por la lógica del formulario se vacían
-          data = pruneHidden(data)
+          data = completarDescripciones(pruneHidden(data))
           const next = { ...prev, data }
           setSaved(false)
           persist(next)

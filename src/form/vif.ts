@@ -5,7 +5,7 @@
  * de modo que el servidor, la búsqueda y el panel de administración muestren el nombre sin cambios.
  */
 import { checks, d, heading, note, row, sel, sections as seccionesNna, t, ta, table } from './schema'
-import type { Section } from './types'
+import { asList, type FormData, type Section } from './types'
 
 export const VIF_TITULO = 'INFORME SOCIOFAMILIAR INICIAL DE VERIFICACIÓN DE DERECHOS- VIOLENCIA INTRAFAMILIAR'
 
@@ -14,34 +14,61 @@ export const VIF_ASUNTO = 'Informe inicial sociofamiliar de verificación de der
 export const VIF_OBJETIVO =
   'Realizar la valoración sociofamiliar de la señora con el fin de identificar las dinámicas familiares, factores de riesgo y protección presentes en su entorno, verificar la posible vulneración de sus derechos derivada de situaciones de violencia intrafamiliar y establecer elementos que orienten la adopción de medidas de protección y acciones de restablecimiento que contribuyan a su bienestar integral y al fortalecimiento de su red de apoyo familiar y social.'
 
-/** Instrumentos de la metodología con la descripción del modelo. */
+/**
+ * Instrumentos de la metodología. `descripcion` es el texto sugerido (redacción del modelo, revisada);
+ * el profesional puede cambiarlo en cada informe (clave `vif_inst_desc_<n>`).
+ */
 export const VIF_INSTRUMENTOS: { nombre: string; descripcion: string }[] = [
   {
     nombre: 'Entrevista semi-estructurada',
     descripcion:
-      'Aplicada a la persona adulta objeto de atención, así como a miembros significativos de su entorno familiar o red de apoyo, con el propósito de conocer su situación personal, familiar y social, antecedentes de los hechos reportados, dinámicas relacionales, condiciones de convivencia, redes de apoyo, factores de riesgo y protección, así como su percepción frente a la situación objeto de estudio.',
+      'Aplicada a la persona objeto de atención y a miembros significativos de su entorno familiar o red de apoyo, con el propósito de conocer su situación personal, familiar y social; los antecedentes de los hechos reportados; las dinámicas relacionales y las condiciones de convivencia; las redes de apoyo y los factores de riesgo y de protección, así como su percepción frente a la situación objeto de estudio.',
   },
   {
     nombre: 'Observación directa',
     descripcion:
-      'Realizada durante el proceso de atención, permitiendo identificar aspectos relacionados con la comunicación, comportamiento, estado emocional, interacción con su entorno familiar y social, condiciones de convivencia, distribución de roles y manifestaciones asociadas a situaciones de vulneración de derechos o afectación de su bienestar integral.',
+      'Realizada durante el proceso de atención, permitió identificar aspectos relacionados con la comunicación, el comportamiento, el estado emocional, la interacción con el entorno familiar y social, las condiciones de convivencia, la distribución de roles y las manifestaciones asociadas a situaciones de vulneración de derechos o de afectación de su bienestar integral.',
   },
   {
     nombre: 'Revisión documental',
     descripcion:
-      'Consistente en el análisis de los documentos aportados al proceso, tales como denuncias, informes institucionales, valoraciones interdisciplinarias, historias clínicas, medidas de protección, registros de atención y demás soportes relevantes para la comprensión integral de la situación evaluada.',
+      'Consistió en el análisis de los documentos aportados al proceso, tales como denuncias, informes institucionales, valoraciones interdisciplinarias, historias clínicas, medidas de protección, registros de atención y demás soportes relevantes para la comprensión integral de la situación evaluada.',
   },
   {
     nombre: 'Registro en formato institucional',
     descripcion:
-      'Consignación sistemática de la información recolectada en los formatos establecidos por la Comisaría de Familia, garantizando la trazabilidad del caso, el seguimiento de las actuaciones y el soporte técnico para la toma de decisiones.',
+      'Consignación sistemática de la información recolectada en los formatos establecidos por la Comisaría de Familia, que garantiza la trazabilidad del caso, el seguimiento de las actuaciones y el soporte técnico para la toma de decisiones.',
   },
   {
     nombre: 'Análisis sociofamiliar',
     descripcion:
-      'A partir de la información recopilada, se realizó un análisis integral de la situación personal, familiar y social de la persona atendida, identificando factores de riesgo y protección, capacidades individuales y familiares, recursos de apoyo y necesidades de intervención, con el propósito de emitir conceptos y recomendaciones técnicas que orienten la adopción de medidas de protección y el fortalecimiento de sus condiciones de bienestar y garantía de derechos.',
+      'A partir de la información recopilada, se realizó un análisis integral de la situación personal, familiar y social de la persona atendida, en el que se identificaron factores de riesgo y de protección, capacidades individuales y familiares, recursos de apoyo y necesidades de intervención, con el propósito de emitir conceptos y recomendaciones técnicas que orienten la adopción de medidas de protección y el fortalecimiento de sus condiciones de bienestar y de garantía de derechos.',
   },
 ]
+
+/** Clave de la descripción editable del instrumento `i`. */
+export const claveDescripcion = (i: number): string => `vif_inst_desc_${i}`
+
+/** Descripciones sugeridas, para los datos iniciales de un informe nuevo. */
+export function descripcionesPorDefecto(): Record<string, string> {
+  return Object.fromEntries(VIF_INSTRUMENTOS.map((ins, i) => [claveDescripcion(i), ins.descripcion]))
+}
+
+/**
+ * Pone la descripción sugerida a los instrumentos marcados que no tienen ninguna
+ * (al volver a marcar uno o en informes creados antes de que fueran editables).
+ * Un texto vacío escrito por el profesional se respeta; al imprimir se usa la sugerida.
+ */
+export function completarDescripciones(data: FormData): FormData {
+  if (data.formato !== 'vif') return data
+  const marcados = asList(data.vif_instrumentos)
+  let next = data
+  VIF_INSTRUMENTOS.forEach((ins, i) => {
+    const k = claveDescripcion(i)
+    if (marcados.includes(ins.nombre) && next[k] === undefined) next = { ...next, [k]: ins.descripcion }
+  })
+  return next
+}
 
 const TIPOS_DOCUMENTO = ['Cédula de ciudadanía', 'Tarjeta de identidad', 'Registro civil', 'Cédula de extranjería', 'Pasaporte', 'Permiso por Protección Temporal (PPT)', 'Ninguno']
 
@@ -119,7 +146,8 @@ export const sectionsVif: Section[] = [
         'Instrumentos aplicados',
         VIF_INSTRUMENTOS.map((i) => i.nombre),
       ),
-      note('Cada instrumento marcado se imprime con su descripción en la tabla de metodología del informe.'),
+      note('Cada instrumento marcado se imprime con su descripción en la tabla de metodología. La descripción viene sugerida y puede ajustarla; si la deja vacía, se usa la sugerida.'),
+      ...VIF_INSTRUMENTOS.map((ins, i) => ta(claveDescripcion(i), `Descripción: ${ins.nombre}`, 5, { when: { key: 'vif_instrumentos', includes: ins.nombre } })),
       ta('vif_otros_instrumentos', 'Otros instrumentos o precisiones (opcional)', 3),
     ],
   },

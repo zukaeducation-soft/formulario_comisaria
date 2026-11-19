@@ -4,7 +4,7 @@
  */
 import { formatDate } from '../pdf/engine'
 import { asList, asRows, asString, type FormData } from './types'
-import { VIF_INSTRUMENTOS, VIF_TITULO } from './vif'
+import { claveDescripcion, VIF_INSTRUMENTOS, VIF_TITULO } from './vif'
 
 export type VifElemento =
   | { t: 'titulo'; text: string }
@@ -93,7 +93,7 @@ export function vifDocumento(data: FormData): VifElemento[] {
 
   out.push({ t: 'h1', text: 'V. Metodología e instrumentos utilizados' })
   const marcados = asList(data.vif_instrumentos)
-  const instrumentos = VIF_INSTRUMENTOS.filter((i) => marcados.includes(i.nombre)).map((i) => [`${i.nombre}:`, i.descripcion])
+  const instrumentos = VIF_INSTRUMENTOS.flatMap((ins, i) => (marcados.includes(ins.nombre) ? [[`${ins.nombre}:`, v(claveDescripcion(i)) || ins.descripcion]] : []))
   if (v('vif_otros_instrumentos')) instrumentos.push(['Otros:', v('vif_otros_instrumentos')])
   out.push({
     t: 'tabla',

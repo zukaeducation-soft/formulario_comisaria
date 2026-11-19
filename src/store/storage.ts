@@ -1,5 +1,5 @@
 import { formatoDe, type FormatoId } from '../form/formatos'
-import { VIF_ASUNTO, VIF_INSTRUMENTOS, VIF_OBJETIVO } from '../form/vif'
+import { descripcionesPorDefecto, VIF_ASUNTO, VIF_INSTRUMENTOS, VIF_OBJETIVO } from '../form/vif'
 import { NNA_ADICIONALES, nnaAdicionales, nnaTieneDatos } from '../form/nna'
 import type { FormData } from '../form/types'
 
@@ -89,6 +89,7 @@ export function defaultData(profile: Profile, formato: FormatoId = 'nna'): FormD
       asunto: VIF_ASUNTO,
       vif_objetivo: VIF_OBJETIVO,
       vif_instrumentos: VIF_INSTRUMENTOS.map((i) => i.nombre),
+      ...descripcionesPorDefecto(),
       prof_nombre: profile.nombre,
       prof_tarjeta: profile.tarjeta,
     }

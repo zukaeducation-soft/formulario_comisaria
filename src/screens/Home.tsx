@@ -1,9 +1,10 @@
+import { FORMATOS, formatoDe, type Formato } from '../form/formatos'
 import { nombresInforme, todosLosNna } from '../form/nna'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import ilustracion from '../assets/hero.webp'
 import { AppShell, iniciales } from '../components/AppShell'
-import { confirmar } from '../components/Dialog'
+import { confirmar, dialogo } from '../components/Dialog'
 import { Icon } from '../components/Icon'
 import { toast } from '../components/Toast'
 import { conFotosParaPdf, eliminarFotosDeInforme } from '../evidencias/fotos'
@@ -17,7 +18,9 @@ import { useSyncContext } from '../store/SyncContext'
 
 const fechaCorta = (iso: string): string => {
   try {
-    return new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short' }).format(new Date(iso))
+    // Una fecha sola (AAAA-MM-DD) se interpreta como día local, no como medianoche UTC
+    const fecha = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T12:00:00`) : new Date(iso)
+    return new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short' }).format(fecha)
   } catch {
     return iso
   }
@@ -53,8 +56,17 @@ export function Home() {
   // Refrescar la lista cuando termina una sincronización
   useEffect(() => sync.subscribe(refresh), [sync, refresh])
 
-  const create = () => {
-    const r = storage.createReport(profile)
+  const create = async () => {
+    const formato = await dialogo({
+      titulo: 'Nuevo informe',
+      mensaje: '¿Qué formato desea diligenciar?',
+      icono: 'file',
+      cancelar: 'cancelar',
+      elecciones: (Object.values(FORMATOS) as Formato[]).map((f) => ({ value: f.id, label: f.nombre, detalle: f.descripcion, etiqueta: f.corto })),
+      acciones: [{ value: 'cancelar', label: 'Cancelar', kind: 'ghost' }],
+    })
+    if (formato !== 'nna' && formato !== 'vif') return
+    const r = storage.createReport(profile, formato)
     navigate({ name: 'editor', id: r.id })
   }
 
@@ -158,7 +170,7 @@ export function Home() {
             <div className="empty">
               <h2>Aún no hay informes</h2>
               <p>Cree el primero y diligéncielo por secciones. Se guarda en este dispositivo y se sincroniza con el servidor.</p>
-              <button type="button" className="btn btn--primary" onClick={create} style={{ marginTop: 14 }}>
+              <button type="button" className="btn btn--primary" onClick={() => void create()} style={{ marginTop: 14 }}>
                 Crear informe
               </button>
             </div>
@@ -181,6 +193,7 @@ export function Home() {
                       <span className="rrow__text">
                         <span className="rrow__name">{nombre || 'Informe sin nombre'}</span>
                         <span className="rrow__meta">
+                          <span className={`tag tag--formato tag--${formatoDe(r.data)}`}>{FORMATOS[formatoDe(r.data)].corto}</span>
                           <span className="rrow__code">{r.codigo ?? 'Código pendiente'}</span>
                           {r.dirty && <span className="tag">Por subir</span>}
                           <span>Elaborado {fechaCorta(asString(r.data.fecha_elaboracion) || r.createdAt)}</span>
@@ -245,7 +258,7 @@ export function Home() {
               Nuevo informe de valoración <em>sociofamiliar</em>
             </h2>
             <p>Diligéncielo por secciones desde el celular o el computador, con fotos, firma y PDF o Word al final.</p>
-            <button type="button" className="btn btn--light" onClick={create}>
+            <button type="button" className="btn btn--light" onClick={() => void create()}>
               <Icon name="plus" size={18} />
               Crear informe
             </button>

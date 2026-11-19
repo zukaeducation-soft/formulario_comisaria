@@ -1,5 +1,7 @@
 import type { PDFImage } from 'pdf-lib'
+import { formatoDe } from '../form/formatos'
 import { todosLosNna, tituloNna } from '../form/nna'
+import { generateVifPdf } from './vif'
 import { FORM_SUBTITLE, FORM_TITLE, sections } from '../form/schema'
 import { asRows, asString, type FormData } from '../form/types'
 import type { Profile } from '../store/storage'
@@ -27,7 +29,7 @@ export const HEADER_TEXT = {
   codigo: 'F-PM-096',
 }
 
-async function embedDataUrl(doc: FlowDocument, dataUrl: string): Promise<PDFImage | undefined> {
+export async function embedDataUrl(doc: FlowDocument, dataUrl: string): Promise<PDFImage | undefined> {
   const m = /^data:(image\/(png|jpeg|jpg));base64,(.+)$/i.exec(dataUrl)
   if (!m) return undefined
   const bytes = Uint8Array.from(atob(m[3]), (c) => c.charCodeAt(0))
@@ -36,6 +38,7 @@ async function embedDataUrl(doc: FlowDocument, dataUrl: string): Promise<PDFImag
 
 /** Genera el PDF del informe con el formato institucional F-PM-096. */
 export async function generatePdf({ data, profile, assets }: GenerateOptions): Promise<Uint8Array> {
+  if (formatoDe(data) === 'vif') return generateVifPdf({ data, profile, assets })
   const doc = await FlowDocument.create()
   const r = new BlockRenderer(doc, data)
 
@@ -105,7 +108,7 @@ export function incluyeDerechos(data: FormData): boolean {
 }
 
 /** Anexo con la evidencia fotográfica (`data._fotos`: [{ descripcion, src }]), dos fotos por fila. */
-async function drawPhotoAnnex(doc: FlowDocument, r: BlockRenderer, data: FormData): Promise<void> {
+export async function drawPhotoAnnex(doc: FlowDocument, r: BlockRenderer, data: FormData): Promise<void> {
   const fotos = asRows(data._fotos)
   if (fotos.length === 0) return
   const imgs: { img: PDFImage; descripcion: string }[] = []

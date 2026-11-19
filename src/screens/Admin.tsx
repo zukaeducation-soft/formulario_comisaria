@@ -1,3 +1,4 @@
+import { FORMATOS, formatoDe } from '../form/formatos'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { AppShell } from '../components/AppShell'
@@ -456,7 +457,9 @@ function TodosLosInformes() {
         <div className="report-list">
           {lista.map((i) => (
             <article key={i.id} className="card report-card" style={{ cursor: 'default' }}>
-              <div className="report-card__code">{i.codigo ?? 'Sin código'}</div>
+              <div className="report-card__code">
+                <span className={`tag tag--formato tag--${formatoDe(i.datos ?? {})}`}>{FORMATOS[formatoDe(i.datos ?? {})].corto}</span> {i.codigo ?? 'Sin código'}
+              </div>
               <div className="report-card__title">{`${i.nna_nombres ?? ''} ${i.nna_apellidos ?? ''}`.trim() || 'Informe sin nombre'}</div>
               <div className="report-card__meta">
                 <span>Profesional: {i.perfiles?.nombre ?? '—'}</span>

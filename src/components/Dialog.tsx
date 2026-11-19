@@ -17,6 +17,8 @@ export interface DialogOptions {
   /** Tono del icono */
   tono?: 'info' | 'warn' | 'danger'
   acciones: DialogAction[]
+  /** Opciones grandes con título y descripción (p. ej. elegir un tipo de formulario) */
+  elecciones?: { value: string; label: string; detalle?: string; etiqueta?: string }[]
   /** Valor devuelto al cerrar con Escape o el fondo (null si se omite) */
   cancelar?: string
 }
@@ -75,7 +77,7 @@ export function DialogHost() {
   useEffect(() => {
     if (!pending) return
     const prev = document.activeElement as HTMLElement | null
-    const first = panel.current?.querySelector<HTMLButtonElement>('.dlg__actions .btn--primary, .dlg__actions .btn--danger, .dlg__actions button')
+    const first = panel.current?.querySelector<HTMLButtonElement>('.dlg__choice, .dlg__actions .btn--primary, .dlg__actions .btn--danger, .dlg__actions button')
     first?.focus()
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -113,6 +115,20 @@ export function DialogHost() {
           {opts.titulo}
         </h2>
         {opts.mensaje && <div className="dlg__msg">{opts.mensaje}</div>}
+        {opts.elecciones && (
+          <div className="dlg__choices">
+            {opts.elecciones.map((e) => (
+              <button type="button" key={e.value} className="dlg__choice" onClick={() => cerrar(e.value)}>
+                {e.etiqueta && <span className="dlg__choice-tag">{e.etiqueta}</span>}
+                <span className="dlg__choice-text">
+                  <span className="dlg__choice-label">{e.label}</span>
+                  {e.detalle && <span className="dlg__choice-detail">{e.detalle}</span>}
+                </span>
+                <Icon name="chevron" size={18} />
+              </button>
+            ))}
+          </div>
+        )}
         <div className="dlg__actions">
           {opts.acciones.map((a) => (
             <button type="button" key={a.value} className={`btn btn--${a.kind ?? 'ghost'}`} onClick={() => cerrar(a.value)}>

@@ -1,3 +1,4 @@
+import { formatoDe } from '../form/formatos'
 import escudoUrl from '../assets/escudo.png'
 import pdetUrl from '../assets/pdet.png'
 import pieUrl from '../assets/pie.png'
@@ -31,7 +32,7 @@ export function pdfFileName(data: FormData): string {
     .replace(/[^a-zA-Z0-9]+/g, '_')
     .replace(/^_|_$/g, '')
   const fecha = asString(data.fecha_elaboracion) || new Date().toISOString().slice(0, 10)
-  return `Informe_Trabajo_Social_${nna || 'NNA'}_${fecha}.pdf`
+  return `${formatoDe(data) === 'vif' ? 'Informe_VIF' : 'Informe_Trabajo_Social'}_${nna || (formatoDe(data) === 'vif' ? 'Victima' : 'NNA')}_${fecha}.pdf`
 }
 
 export async function buildPdfBlob(data: FormData, profile: Profile): Promise<Blob> {

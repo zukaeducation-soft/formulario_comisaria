@@ -19,52 +19,52 @@ import type {
 } from './types'
 
 // ---------- Constructores breves ----------
-const t = (key: string, label: string, extra: Partial<TextBlock> = {}): TextBlock => ({ type: 'text', key, label, ...extra })
-const d = (key: string, label: string): DateBlock => ({ type: 'date', key, label })
-const ta = (key: string, label: string, rows = 4, extra: Partial<TextAreaBlock> = {}): TextAreaBlock => ({
+export const t = (key: string, label: string, extra: Partial<TextBlock> = {}): TextBlock => ({ type: 'text', key, label, ...extra })
+export const d = (key: string, label: string): DateBlock => ({ type: 'date', key, label })
+export const ta = (key: string, label: string, rows = 4, extra: Partial<TextAreaBlock> = {}): TextAreaBlock => ({
   type: 'textarea',
   key,
   label,
   rows,
   ...extra,
 })
-const radio = (key: string, label: string, options: string[], extra: Partial<RadioBlock> = {}): RadioBlock => ({
+export const radio = (key: string, label: string, options: string[], extra: Partial<RadioBlock> = {}): RadioBlock => ({
   type: 'radio',
   key,
   label,
   options,
   ...extra,
 })
-const checks = (key: string, label: string, options: string[], extra: Partial<ChecksBlock> = {}): ChecksBlock => ({
+export const checks = (key: string, label: string, options: string[], extra: Partial<ChecksBlock> = {}): ChecksBlock => ({
   type: 'checks',
   key,
   label,
   options,
   ...extra,
 })
-const yn = (key: string, label: string, noLabel = '¿Por qué?', yesLabel = 'Descripción'): YesNoBlock => ({
+export const yn = (key: string, label: string, noLabel = '¿Por qué?', yesLabel = 'Descripción'): YesNoBlock => ({
   type: 'yesno',
   key,
   label,
   noLabel,
   yesLabel,
 })
-const row = (items: Block[], widths?: number[]): RowBlock => ({ type: 'row', items, widths })
-const group = (label: string, items: Block[]): GroupBlock => ({ type: 'group', label, items })
-const heading = (text: string): HeadingBlock => ({ type: 'heading', text })
-const note = (text: string): NoteBlock => ({ type: 'note', text })
-const table = (key: string, columns: TableColumn[], rows: number, extra: Partial<TableBlock> = {}): TableBlock => ({
+export const row = (items: Block[], widths?: number[]): RowBlock => ({ type: 'row', items, widths })
+export const group = (label: string, items: Block[]): GroupBlock => ({ type: 'group', label, items })
+export const heading = (text: string): HeadingBlock => ({ type: 'heading', text })
+export const note = (text: string): NoteBlock => ({ type: 'note', text })
+export const table = (key: string, columns: TableColumn[], rows: number, extra: Partial<TableBlock> = {}): TableBlock => ({
   type: 'table',
   key,
   columns,
   rows,
   ...extra,
 })
-const other = (key: string, label = '¿Cuál?'): OtherField => ({ key, label })
-const sel = (key: string, label: string, extra: Partial<SelectBlock> = {}): SelectBlock => ({ type: 'select', key, label, ...extra })
-const si = (key: string): Condition => ({ key, equals: 'Sí' })
+export const other = (key: string, label = '¿Cuál?'): OtherField => ({ key, label })
+export const sel = (key: string, label: string, extra: Partial<SelectBlock> = {}): SelectBlock => ({ type: 'select', key, label, ...extra })
+export const si = (key: string): Condition => ({ key, equals: 'Sí' })
 /** Asigna una condición de visibilidad a un bloque. Acepta (condición, bloque) o (bloque, condición). */
-function cond<B extends Block>(a: Condition | B, b: B | Condition): B {
+export function cond<B extends Block>(a: Condition | B, b: B | Condition): B {
   const [block, when] = ('type' in a ? [a as B, b as Condition] : [b as B, a as Condition])
   return { ...block, when }
 }

@@ -1,4 +1,4 @@
-import { sections } from './schema'
+import { seccionesDe } from './formatos'
 import { collectKeys, type FieldValue, type FormData } from './types'
 
 export function hasValue(v: FieldValue): boolean {
@@ -13,12 +13,12 @@ export function hasValue(v: FieldValue): boolean {
 /** Secciones con al menos un dato diligenciado. */
 export function sectionsDone(data: FormData): Set<string> {
   const done = new Set<string>()
-  for (const s of sections) {
+  for (const s of seccionesDe(data)) {
     if (collectKeys(s.blocks).some((k) => hasValue(data[k]))) done.add(s.id)
   }
   return done
 }
 
 export function progressPercent(data: FormData): number {
-  return Math.round((sectionsDone(data).size / sections.length) * 100)
+  return Math.round((sectionsDone(data).size / seccionesDe(data).length) * 100)
 }

@@ -3,6 +3,8 @@ import pdet from '../assets/pdet.png?inline'
 import pie from '../assets/pie.png?inline'
 import type { FormData } from '../form/types'
 import type { Profile } from '../store/storage'
+import { formatoDe } from '../form/formatos'
+import { buildPdfBlob } from './download'
 import { buildPrintHtml } from './html'
 
 /**
@@ -22,9 +24,9 @@ export function openPrintView(data: FormData | Promise<FormData>, profile: Profi
     /* algunos navegadores no permiten escribir en la ventana nueva */
   }
   Promise.resolve(data)
-    .then((d) => {
-      const html = buildPrintHtml(d, profile, { escudo, pdet, pie })
-      const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    .then(async (d) => {
+      // El formato de violencia intrafamiliar se muestra como PDF (no tiene vista HTML propia)
+      const blob = formatoDe(d) === 'vif' ? await buildPdfBlob(d, profile) : new Blob([buildPrintHtml(d, profile, { escudo, pdet, pie })], { type: 'text/html;charset=utf-8' })
       const url = URL.createObjectURL(blob)
       win.location.replace(url)
       // Se mantiene la URL un rato para permitir recargar la pestaña.

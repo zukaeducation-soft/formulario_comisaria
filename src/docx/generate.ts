@@ -26,7 +26,9 @@ import {
   type ITableCellOptions,
 } from 'docx'
 import { parseRich } from '../form/richtext'
+import { formatoDe } from '../form/formatos'
 import { todosLosNna, tituloNna } from '../form/nna'
+import { vifDocumento, vifFirma, type VifElemento } from '../form/vifDoc'
 import { FORM_SUBTITLE, FORM_TITLE, sections } from '../form/schema'
 import {
   asList,
@@ -93,15 +95,16 @@ const para = (children: (TextRun | ImageRun)[], opts: Partial<IParagraphOptions>
 const labelPara = (text: string): Paragraph => para([run(text, { bold: true, size: SZ_LABEL })])
 
 /** Párrafos de un texto con formato (negrita, cursiva, subrayado, listas), justificados. */
-function richParas(text: string, opts: { autoBullet?: boolean; justify?: boolean } = {}): Paragraph[] {
+function richParas(text: string, opts: { autoBullet?: boolean; justify?: boolean; sangria?: number } = {}): Paragraph[] {
+  const base = opts.sangria ?? 0
   if (!text.trim()) return [para([run('')])]
   return parseRich(text).map((line) => {
     const runs = line.runs.map((r) => run(r.text, { bold: r.bold, italics: r.italic, underline: r.underline }))
     const marker = line.markerText || (opts.autoBullet && runs.length ? '•' : '')
     const alignment = opts.justify === false ? AlignmentType.LEFT : AlignmentType.JUSTIFIED
-    if (!marker) return para(runs.length ? runs : [run('')], { alignment })
+    if (!marker) return para(runs.length ? runs : [run('')], { alignment, indent: base ? { left: base, right: base } : undefined })
     const mk = line.marker === 'square' ? '▪' : marker
-    return para([run(`${mk}\t`), ...runs], { alignment, indent: { left: 300, hanging: 300 }, tabStops: [{ type: TabStopType.LEFT, position: 300 }] })
+    return para([run(`${mk}\t`), ...runs], { alignment, indent: { left: base + 300, hanging: 300, right: base || undefined }, tabStops: [{ type: TabStopType.LEFT, position: base + 300 }] })
   })
 }
 
@@ -413,6 +416,7 @@ function footer(assets: DocxAssets | undefined): Footer {
 // ---------- Documento ----------
 
 export async function generateDocx({ data, profile, assets }: GenerateDocxOptions): Promise<Blob> {
+  if (formatoDe(data) === 'vif') return generateVifDocx({ data, profile, assets })
   const r = new DocxRenderer(data)
   const body: (Paragraph | Table)[] = []
   body.push(para([run(FORM_TITLE, { bold: true })], { alignment: AlignmentType.CENTER }))
@@ -444,6 +448,111 @@ export async function generateDocx({ data, profile, assets }: GenerateDocxOption
     creator: 'Informe TS - Comisaría de Familia',
     title: `Informe Trabajo Social${nna ? ` - ${nna}` : ''}`,
     subject: FORM_TITLE,
+    styles: { default: { document: { run: { font: FONT, size: SZ_VALUE } } } },
+    sections: [
+      {
+        properties: {
+          page: {
+            size: { width: PAGE_W, height: 15840 },
+            margin: { top: 1900, bottom: 1500, left: MARGIN, right: MARGIN, header: 400, footer: 300 },
+          },
+        },
+        headers: { default: header(assets) },
+        footers: { default: footer(assets) },
+        children: body,
+      },
+    ],
+  })
+  return Packer.toBlob(doc)
+}
+
+// ---------- Informe de violencia intrafamiliar (formato VIF) ----------
+
+const AZUL = 'DDE6F2'
+const borde = { style: BorderStyle.SINGLE, size: 4, color: '9EC2E6' }
+const BORDES_AZULES = { top: borde, bottom: borde, left: borde, right: borde }
+const SANGRIA = 360 // margen de tablas y texto respecto al título, como en el modelo
+const ANCHO_VIF = CONTENT_W - 2 * SANGRIA
+
+function vifTabla(pesos: number[], filas: { text: string; bold?: boolean; fill?: string; center?: boolean; justify?: boolean }[][]): Table {
+  const widths = splitWidth(ANCHO_VIF, pesos)
+  const rows = filas.map(
+    (fila) =>
+      new TableRow({
+        cantSplit: true,
+        children: fila.map((c, i) => {
+          const contenido = c.bold
+            ? [para([run(c.text || ' ', { bold: true })], { alignment: c.center ? AlignmentType.CENTER : AlignmentType.LEFT })]
+            : richParas(c.text, { justify: !!c.justify })
+          return cell(contenido, { width: widths[i], shade: c.fill, borders: BORDES_AZULES })
+        }),
+      }),
+  )
+  return new Table({
+    rows,
+    width: { size: ANCHO_VIF, type: WidthType.DXA },
+    columnWidths: widths,
+    layout: TableLayoutType.FIXED,
+    indent: { size: SANGRIA, type: WidthType.DXA },
+  })
+}
+
+function vifElemento(e: VifElemento): (Paragraph | Table)[] {
+  switch (e.t) {
+    case 'titulo':
+      return [para([run(e.text, { bold: true, size: 22 })], { alignment: AlignmentType.CENTER })]
+    case 'codigo':
+      return [para([run(e.text, { size: 18 })], { alignment: AlignmentType.CENTER, spacing: { before: 0, after: 80 } })]
+    case 'h1':
+      return [para([run(e.text, { bold: true, size: 21 })], { indent: { left: 720 }, spacing: { before: 200, after: 100 }, keepNext: true })]
+    case 'h2':
+      return [para([run('▪  ', { bold: true, size: 20 }), run(e.text, { bold: true, size: 20 })], { indent: { left: SANGRIA }, spacing: { before: 100, after: 60 }, keepNext: true })]
+    case 'kv':
+      return [
+        vifTabla(
+          [34, 66],
+          e.rows.map(([k, v]) => [
+            { text: k, bold: true, fill: AZUL },
+            { text: v, justify: true },
+          ]),
+        ),
+      ]
+    case 'tabla': {
+      const dos = e.cols.length === 2
+      return [
+        vifTabla(
+          e.cols.map((c) => c.w),
+          [
+            e.cols.map((c) => ({ text: c.label, bold: true, fill: AZUL, center: true })),
+            ...e.rows.map((r, i) => r.map((text, j) => ({ text, bold: dos && j === 0, justify: dos && j === 1, fill: dos && j === 0 ? AZUL : i % 2 ? AZUL : undefined }))),
+          ],
+        ),
+      ]
+    }
+    case 'texto':
+      return richParas(e.text, { autoBullet: e.bullets, sangria: SANGRIA })
+  }
+}
+
+async function generateVifDocx({ data, profile, assets }: GenerateDocxOptions): Promise<Blob> {
+  const body: (Paragraph | Table)[] = []
+  for (const e of vifDocumento(data)) {
+    body.push(...vifElemento(e))
+    if (e.t === 'kv' || e.t === 'tabla') body.push(para([run('')], { spacing: { before: 0, after: 60 } }))
+  }
+  // Firma centrada al final
+  const firma = profile.firma ? desdeDataUrl(profile.firma) : undefined
+  body.push(para([run('')], { spacing: { before: 300, after: 0 } }))
+  if (firma) body.push(para([imageRun(firma, 220, 70)], { alignment: AlignmentType.CENTER, keepNext: true }))
+  body.push(para([run('_______________________________________________', { bold: true })], { alignment: AlignmentType.CENTER, keepNext: true }))
+  for (const linea of vifFirma(data, profile)) body.push(para([run(linea, { bold: true, size: 18 })], { alignment: AlignmentType.CENTER, keepNext: true }))
+  const anexo = photoAnnex(data)
+  if (anexo) body.push(para([run('')], { spacing: { before: 200, after: 0 } }), anexo)
+
+  const nombre = asString(data.nombres).trim()
+  const doc = new Document({
+    creator: 'Informe TS - Comisaría de Familia',
+    title: `Informe VIF${nombre ? ` - ${nombre}` : ''}`,
     styles: { default: { document: { run: { font: FONT, size: SZ_VALUE } } } },
     sections: [
       {

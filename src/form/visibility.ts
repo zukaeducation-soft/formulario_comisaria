@@ -1,5 +1,5 @@
 import { municipiosDe, NOMBRES_DEPARTAMENTOS, PAISES } from '../data/colombia'
-import { sections } from './schema'
+import { seccionesDe } from './formatos'
 import { asList, asString, collectKeys, type Block, type Condition, type FormData, type SelectBlock } from './types'
 
 /** Evalúa una condición declarativa contra los datos del informe. */
@@ -58,7 +58,7 @@ export function pruneHidden(data: FormData): FormData {
       if (b.type === 'row' || b.type === 'group') walk(b.items, hidden)
     }
   }
-  for (const s of sections) walk(s.blocks, false)
+  for (const s of seccionesDe(data)) walk(s.blocks, false)
   return changed ? next : data
 }
 

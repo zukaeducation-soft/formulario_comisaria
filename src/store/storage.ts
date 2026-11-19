@@ -1,3 +1,5 @@
+import { formatoDe, type FormatoId } from '../form/formatos'
+import { VIF_ASUNTO, VIF_INSTRUMENTOS, VIF_OBJETIVO } from '../form/vif'
 import { NNA_ADICIONALES, nnaAdicionales, nnaTieneDatos } from '../form/nna'
 import type { FormData } from '../form/types'
 
@@ -74,8 +76,23 @@ function readJson<T>(store: KeyValueStore, key: string, fallback: T): T {
 }
 
 /** Datos con los que nace un informe nuevo (prellenados desde el perfil). */
-export function defaultData(profile: Profile): FormData {
+export function defaultData(profile: Profile, formato: FormatoId = 'nna'): FormData {
   const hoy = todayIso()
+  if (formato === 'vif') {
+    return {
+      formato: 'vif',
+      fecha_elaboracion: hoy,
+      elaborado_por: profile.nombre,
+      seccion: 'Trabajo Social – Comisaría de Familia',
+      tarjeta_profesional: profile.tarjeta,
+      dirigido_a: profile.dirigidoA,
+      asunto: VIF_ASUNTO,
+      vif_objetivo: VIF_OBJETIVO,
+      vif_instrumentos: VIF_INSTRUMENTOS.map((i) => i.nombre),
+      prof_nombre: profile.nombre,
+      prof_tarjeta: profile.tarjeta,
+    }
+  }
   return {
     fecha_elaboracion: hoy,
     elaborado_por: profile.nombre,
@@ -100,12 +117,12 @@ const tieneContenido = (v: unknown): boolean =>
  * (los valores por defecto, con cualquier fecha, no cuentan como contenido).
  */
 export function isEmptyReport(data: FormData, profile: Profile): boolean {
-  const base = defaultData(profile)
+  const base = defaultData(profile, formatoDe(data))
   const fechas = new Set(['fecha_elaboracion', 'prof_fecha_elaboracion'])
   for (const [k, v] of Object.entries(data)) {
     if (k.startsWith('_') || !tieneContenido(v)) continue
     if (fechas.has(k)) continue
-    if (k in base && base[k] === v) continue
+    if (k in base && JSON.stringify(base[k]) === JSON.stringify(v)) continue
     if (k === 'edad_anios' || k === 'edad_meses') continue
     if (k === NNA_ADICIONALES && !nnaAdicionales(data).some(nnaTieneDatos)) continue
     return false
@@ -165,7 +182,7 @@ export function createStorage(uid: string, store: KeyValueStore = defaultStore()
     else putRaw({ ...r, deletedAt: new Date().toISOString(), dirty: true })
   }
 
-  const createReport = (profile: Profile): Report => {
+  const createReport = (profile: Profile, formato: FormatoId = 'nna'): Report => {
     const now = new Date().toISOString()
     const report: Report = {
       id: newId(),
@@ -174,7 +191,7 @@ export function createStorage(uid: string, store: KeyValueStore = defaultStore()
       createdAt: now,
       updatedAt: now,
       dirty: true,
-      data: defaultData(profile),
+      data: defaultData(profile, formato),
     }
     writeAll([report, ...readAll()])
     return report

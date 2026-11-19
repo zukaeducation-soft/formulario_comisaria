@@ -11,7 +11,7 @@ import { Icon } from '../components/Icon'
 import { toast } from '../components/Toast'
 import { agregarNna, nnaAdicionales, nombreNna, nombresInforme, quitarNna, recalcularEdades, setNnaAdicional } from '../form/nna'
 import { sectionsDone } from '../form/progress'
-import { sections } from '../form/schema'
+import { FORMATOS, formatoDe, seccionesDe } from '../form/formatos'
 import { asString, type FieldValue, type FormData } from '../form/types'
 import { edadEn, normalizeData, pruneHidden } from '../form/visibility'
 import { navigate } from '../hooks/useHashRoute'
@@ -46,6 +46,7 @@ export function Editor({ id, sectionId }: Props) {
     reportRef.current = report
   }, [report])
 
+  const sections = seccionesDe(report?.data ?? {})
   const index = Math.max(
     0,
     sections.findIndex((s) => s.id === sectionId),
@@ -313,7 +314,7 @@ export function Editor({ id, sectionId }: Props) {
     <FormContext.Provider value={api}>
       <TopBar
         title={nna || 'Nuevo informe'}
-        subtitle={`${report.codigo ?? 'Código pendiente'} · Sección ${index + 1} de ${sections.length} · ${section.short}`}
+        subtitle={`${FORMATOS[formatoDe(report.data)].corto} · ${report.codigo ?? 'Código pendiente'} · Sección ${index + 1} de ${sections.length} · ${section.short}`}
         onBack={() => void cerrar()}
         right={
           <>

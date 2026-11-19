@@ -1490,12 +1490,22 @@ select.input {
 }
 .rt__btn--ia {
   margin-left: auto;
-  color: var(--green-900);
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--green);
+  border-color: var(--green);
+  box-shadow: 0 6px 16px -8px rgba(18, 94, 66, 0.6);
+}
+.rt__btn--ia:hover {
+  color: #fff;
+  background: var(--green-600);
   border-color: var(--green-600);
 }
 .rt__btn--ia:disabled {
   cursor: progress;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 .rt__ia-nota {
   margin: 0 0 8px;

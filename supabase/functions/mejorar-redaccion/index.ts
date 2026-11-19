@@ -13,7 +13,9 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
 const MAX_CARACTERES = 8000
-const MODELO_POR_DEFECTO = 'llama-3.3-70b-versatile'
+// Groq retira modelos con el tiempo: se prueban en orden hasta encontrar uno disponible.
+// El secreto GROQ_MODEL, si existe, va primero.
+const MODELOS = ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile', 'openai/gpt-oss-20b', 'llama-3.1-8b-instant']
 
 const INSTRUCCIONES = `Eres un corrector de estilo para informes de Trabajo Social de una Comisaría de Familia en Colombia.
 Recibes el texto de un cuadro del informe y devuelves ese mismo texto con mejor redacción.
@@ -67,19 +69,39 @@ Deno.serve(async (req: Request) => {
   if (texto.length > MAX_CARACTERES) return json({ error: `El texto es muy largo (máximo ${MAX_CARACTERES} caracteres).` }, 413)
 
   // 3) Llamada a Groq (API compatible con OpenAI)
-  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: Deno.env.get('GROQ_MODEL') || MODELO_POR_DEFECTO,
-      temperature: 0.2,
-      max_tokens: 4096,
-      messages: [
-        { role: 'system', content: INSTRUCCIONES },
-        { role: 'user', content: texto },
-      ],
-    }),
-  })
+  const preferido = Deno.env.get('GROQ_MODEL')?.trim()
+  const modelos = [...new Set([...(preferido ? [preferido] : []), ...MODELOS])]
+  let resp: Response | null = null
+  for (const model of modelos) {
+    resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        temperature: 0.2,
+        max_tokens: 4096,
+        // Los modelos gpt-oss razonan antes de responder: poco razonamiento y sin incluirlo en la respuesta
+        ...(model.startsWith('openai/gpt-oss') ? { reasoning_effort: 'low', include_reasoning: false } : {}),
+        messages: [
+          { role: 'system', content: INSTRUCCIONES },
+          { role: 'user', content: texto },
+        ],
+      }),
+    })
+    // Modelo retirado o sin acceso: probar el siguiente
+    if (resp.status === 404 || resp.status === 400) {
+      const detalle = await resp.text().catch(() => '')
+      if (/model_not_found|model_decommissioned|does not exist|decommissioned/i.test(detalle)) {
+        console.warn('Groq: modelo no disponible', model)
+        continue
+      }
+      console.error('Groq', resp.status, detalle)
+      return json({ error: 'El servicio de redacción no respondió. Intente de nuevo.' }, 502)
+    }
+    break
+  }
+  if (!resp || resp.bodyUsed) return json({ error: 'Ningún modelo de Groq está disponible. Configure el secreto GROQ_MODEL.' }, 502)
+  if (resp.status === 401) return json({ error: 'La clave de Groq no es válida. Revise el secreto GROQ_API_KEY.' }, 502)
 
   if (resp.status === 429) return json({ error: 'Se alcanzó el límite gratuito de solicitudes. Intente de nuevo en un minuto.' }, 429)
   if (!resp.ok) {

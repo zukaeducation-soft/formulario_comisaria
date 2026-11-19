@@ -91,7 +91,7 @@ guardan primero en el dispositivo (funciona sin conexión) y se sincronizan con 
    través de la función (la clave nunca llega al navegador), se muestra la propuesta y solo se
    aplica si el profesional pulsa **Aplicar**. Se conserva el formato (negrita, viñetas). Requiere
    internet. El modelo se puede cambiar con el secreto `GROQ_MODEL`
-   (por defecto `llama-3.3-70b-versatile`).
+   (si no se define, se prueban en orden varios modelos disponibles de Groq).
 5. Copiar `.env.example` a `.env` con la URL del proyecto y la clave pública (anon / publishable),
    y configurar las mismas variables en Vercel.
 
